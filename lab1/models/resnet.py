@@ -43,8 +43,9 @@ class ResidualBlock(nn.Module):
             if self.residual_type == 'c':
                 self.project = DownsampleB(in_channels, out_channels, stride)
         # vgg has strided conv instead of maxpool
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride,
+                               bias=(not self.batchnorm))
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=(not self.batchnorm))
         if self.batchnorm:
             self.bn1 = nn.BatchNorm2d(out_channels)
             self.bn2 = nn.BatchNorm2d(out_channels)
@@ -74,23 +75,22 @@ class ResidualBlock(nn.Module):
         return out
 
 
-class TinyResNet(nn.Module):
-    def __init__(self, layers, num_classes=10, residual=False, residual_type='b', num_channels=16, batchnorm=True):
+class ResNet(nn.Module):
+    def __init__(self, layers, residual=False, residual_type='b', num_channels=16, batchnorm=True):
         super().__init__()
         self.residual = residual
         self.batchnorm = batchnorm
         self.residual_type = residual_type if residual else None
-        self.conv1 = nn.Conv2d(3, num_channels, 3, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(3, num_channels, 3, padding=1, bias=(not self.batchnorm))
         if self.batchnorm:
             self.bn1 = nn.BatchNorm2d(num_channels)
         # stack 3 convolutional block of 2n layers each, with first block performing a downsampling (only in 2nd and 3rd layer for CIFAR)
+        self.num_channels = num_channels
         self.layer1 = self._add_block(in_channels=num_channels, out_channels=num_channels, n_blocks=layers[0], stride=1)
         num_channels *= 2
         self.layer2 = self._add_block(num_channels // 2, num_channels, layers[1], stride=2)
         num_channels *= 2
         self.layer3 = self._add_block(num_channels // 2, num_channels, layers[2], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(num_channels, num_classes)
 
     def _add_block(self, in_channels, out_channels, n_blocks, stride=1):
         layers = []
@@ -107,15 +107,29 @@ class TinyResNet(nn.Module):
         if self.batchnorm:
             out = self.bn1(out)
         out = F.relu(out, inplace=True)
-        # print(out.shape) # 128,16,16,16
+        # print(out.shape) # 128,16,32,32
         out = self.layer1(out)
-        # print(out.shape) # 128,32,8,8
+        # print(out.shape) # 128,32,16,16
         out = self.layer2(out)
-        # print(out.shape)
+        # print(out.shape) # 128,32,8,8
         out = self.layer3(out)
+        # print(out.shape) # 128,64,4,4
         # print(out.shape)
-        # print(out.shape)
+        return out
+
+
+class ResNetForClassification(ResNet):
+    def __init__(self, num_classes: int = 10, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(self.num_channels, num_classes)
+
+    def forward(self, x):
+        out = super().forward(x)
+        # print(out.shape) # 128,64,4,4
         out = self.avgpool(out)
+        # print(out.shape) # 128,64,1,1
         out = torch.flatten(out, 1)
+        # print(out.shape) # 128,64
         out = self.fc(out)
         return out

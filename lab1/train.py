@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import wandb
 from data_loader import SubsetDataset
-from models.resnet import TinyResNet
+from models.resnet import ResNetForClassification
 from trainer import Trainer
 
 
@@ -78,7 +78,7 @@ def main(args):
 
     writer = wandb.init(**wandb_config, config=config)
     config = wandb.config
-    model = TinyResNet(**arch_hparams).to(DEVICE)
+    model = ResNetForClassification(**arch_hparams).to(DEVICE)
 
     tot_params = sum(p.numel() for p in model.parameters())
 
