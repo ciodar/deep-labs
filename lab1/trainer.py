@@ -29,6 +29,8 @@ class Trainer:
             if valid_loader is not None:
                 val_log = self._valid_epoch(model, valid_loader, epoch)
                 val_results.append(val_log)
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
         self.writer.finish()
         return train_results, val_results
 
@@ -57,8 +59,6 @@ class Trainer:
                 self.writer.log({"train_loss": loss.item(), "train_accuracy": acc.item()})
             losses.append(loss.item())
             pbar.update()
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.step()
         train_loss = np.mean(losses)
         train_acc = self.train_metric.compute().item()
         pbar.set_postfix(train_loss=train_loss, train_acc=train_acc)

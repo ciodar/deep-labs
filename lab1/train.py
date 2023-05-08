@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import torch
 import torchvision.datasets as datasets
+from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import Subset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -22,19 +23,17 @@ def main(args):
     dataset = datasets.CIFAR10(root=args.data, train=True, download=True)
     # normalize data based on train split
     normalize = transforms.Normalize((0.49139968, 0.48215841, 0.44653091), (0.24703223, 0.24348513, 0.26158784))
-    # # # Data augmentation and normalization for training
-    # # # Just normalization for validation
+    # Data augmentation and normalization for training
+    # Just normalization for validation
     transform = {
         'train': transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(32, 4),
             transforms.ToTensor(),
             normalize
-
         ]),
         'val': transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.49139968, 0.48215841, 0.44653091), (0.24703223, 0.24348513, 0.26158784)),
             normalize
         ]),
     }
@@ -66,6 +65,7 @@ def main(args):
     arch_hparams = {
         "layers": [args.num_layers] * 3,
         "residual": args.residual,
+        "batchnorm": args.batchnorm,
         "num_classes": 10,
         "num_channels": args.num_channels,
         "residual_type": args.residual_type
@@ -80,17 +80,19 @@ def main(args):
     config = wandb.config
     model = TinyResNet(**arch_hparams).to(DEVICE)
 
+    tot_params = sum(p.numel() for p in model.parameters())
+
     print(model)
+    print("Total number of parameters: ", tot_params)
 
     # Get optimizer from torch.optim
     opt = getattr(torch.optim, config.optimizer)(params=model.parameters(), lr=config.lr, weight_decay=config.wd,
                                                  momentum=config.momentum)
 
-    # Get learning rate scheduler
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[50, 75])
+    scheduler = MultiStepLR(opt, milestones=[50, 75], gamma=0.1, verbose=True)
 
     # Begin training
-    trainer = Trainer(opt, writer, epochs=config.epochs, device=DEVICE, lr_scheduler=lr_scheduler)
+    trainer = Trainer(opt, writer, epochs=config.epochs, device=DEVICE, lr_scheduler=scheduler)
     trainer.train(model, train_data_loader, valid_data_loader)
 
 
@@ -118,6 +120,8 @@ parser.add_argument('--num_channels', default=16, type=int,
                     help='Number of channels of first conv layer')
 parser.add_argument('--residual', action=argparse.BooleanOptionalAction,
                     help='Enable residual connections')
+parser.add_argument('--batchnorm', action=argparse.BooleanOptionalAction,
+                    help='Enable batch normalization')
 parser.add_argument('--residual_type', default='a', type=str,
                     help='Residual connection type (Available values: a,b,c)')
 args = parser.parse_args()
