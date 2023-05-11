@@ -89,31 +89,35 @@ def main(args):
     opt = getattr(torch.optim, config.optimizer)(params=model.parameters(), lr=config.lr, weight_decay=config.wd,
                                                  momentum=config.momentum)
 
-    scheduler = MultiStepLR(opt, milestones=[50, 75], gamma=0.1, verbose=True)
+    scheduler = MultiStepLR(opt, milestones=[50, 75], gamma=0.1)
 
     # Begin training
-    trainer = Trainer(opt, writer, epochs=config.epochs, device=DEVICE, lr_scheduler=scheduler)
+    trainer = Trainer(opt, writer, epochs=config.epochs, device=DEVICE, lr_scheduler=scheduler,
+                      checkpoints=args.checkpoints)
     trainer.train(model, train_data_loader, valid_data_loader)
 
 
 parser = argparse.ArgumentParser(description='Lab1 - Resnets training')
 # Configuration
 parser.add_argument('--data', default='data/', help='path to CIFAR-10 dataset root (default: ./data/)')
-parser.add_argument('--lr', default=0.1, type=float,
-                    help='learning rate for training')
 parser.add_argument('--epochs', default=85, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--batch_size', type=int,
                     default=128, help='input batch size')
+parser.add_argument('--checkpoints', action=argparse.BooleanOptionalAction,
+                    help='Enable checkpoints saving')
+parser.add_argument('--device', type=str, default='cuda',
+                    help='ID of GPUs to use, eg. cuda:0,cuda:1')
+# Optimizer hyperparameters
 parser.add_argument('--optim', type=str, default='SGD',
                     help='optim for training, Adam / SGD (default)')
+parser.add_argument('--lr', default=0.1, type=float,
+                    help='learning rate for training')
 parser.add_argument('--momentum', default=0.9, type=float,
                     help='momentum for SGD')
 parser.add_argument('--weight_decay', default=1e-4, type=float,
                     help='weight_decay for SGD')
-parser.add_argument('--device', type=str, default='cuda',
-                    help='ID of GPUs to use, eg. cuda:0,cuda:1')
-# Hyperparameters
+# Architecture hyperparameters
 parser.add_argument('--num_layers', default=1, type=int,
                     help='Number of layers for each convolutional block')
 parser.add_argument('--num_channels', default=16, type=int,

@@ -85,12 +85,12 @@ class ResNet(nn.Module):
         if self.batchnorm:
             self.bn1 = nn.BatchNorm2d(num_channels)
         # stack 3 convolutional block of 2n layers each, with first block performing a downsampling (only in 2nd and 3rd layer for CIFAR)
-        self.num_channels = num_channels
         self.layer1 = self._add_block(in_channels=num_channels, out_channels=num_channels, n_blocks=layers[0], stride=1)
         num_channels *= 2
         self.layer2 = self._add_block(num_channels // 2, num_channels, layers[1], stride=2)
         num_channels *= 2
         self.layer3 = self._add_block(num_channels // 2, num_channels, layers[2], stride=2)
+        self.num_channels = num_channels
 
     def _add_block(self, in_channels, out_channels, n_blocks, stride=1):
         layers = []
