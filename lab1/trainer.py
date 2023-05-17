@@ -5,6 +5,7 @@ import torchmetrics
 import torch.nn.functional as F
 import torch
 from matplotlib import pyplot as plt
+from sklearn.metrics import accuracy_score, classification_report
 from tqdm import tqdm
 from wandb.beta.workflows import log_model, link_model
 
@@ -14,7 +15,7 @@ USE_BETA_APIS = False
 
 
 class Trainer:
-    def __init__(self, optimizer, writer, lr_scheduler=None, epochs=100, device='cuda', checkpoints=False,
+    def __init__(self, optimizer=None, writer=None, lr_scheduler=None, epochs=100, device='cuda', checkpoints=False,
                  dataset_name="cifar10", model_collection_name="CIFAR-10 ResNet", **kwargs):
         self.optimizer = optimizer
         self.writer = writer
@@ -45,6 +46,7 @@ class Trainer:
             self.writer.watch(model, self.log_freq)
         train_results, val_results = [], []
         for epoch in range(1, self.epochs + 1):
+            # train model
             self._train_loss, self._train_acc = self._train_epoch(model, train_loader, epoch)
             train_results.append((self._train_loss, self._train_acc))
             # validate model
@@ -57,12 +59,17 @@ class Trainer:
                 self._save_checkpoint(model, epoch, True)
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
+        # save model weigths on wandb
         if self.writer is not None:
             if self.checkpoints:
-                if USE_BETA_APIS:
-                    link_model(self.best_model, self.model_collection_name)
-                else:
-                    wandb.run.link_artifact(self.best_model, self.model_collection_name, ["latest"])
+                try:
+                    if USE_BETA_APIS:
+                        link_model(self.best_model, self.model_collection_name)
+                    else:
+                        wandb.run.link_artifact(self.best_model, self.model_collection_name, ["latest"])
+                # if offline cannot link artifacts
+                except NotImplementedError as e:
+                    pass
             self.writer.finish()
         return train_results, val_results
 
@@ -75,7 +82,6 @@ class Trainer:
             'optimizer': self.optimizer.state_dict(),
             'config': dict(self.writer.config)
         }
-
         # print(f"Saving into {filename} ...")
         if USE_BETA_APIS:
             model_version = log_model(model, self.dataset_name, ["best"] if best else None)
@@ -145,6 +151,17 @@ class Trainer:
         # print(f"Epoch: {epoch} | valid loss: {val_loss} | valid accuracy: {val_acc}")
         return val_loss, val_acc
 
+    def test(self, model, data_loader):
+        predictions = []
+        targets = []
+        for (input, target) in tqdm(data_loader, desc='Testing', leave=False):
+            input = input.to(self.device)
+            preds = torch.argmax(model(input), dim=1)
+            targets.append(target)
+            predictions.append(preds.detach().cpu().numpy())
+        return (accuracy_score(np.hstack(targets), np.hstack(predictions)),
+                classification_report(np.hstack(targets), np.hstack(predictions), zero_division=0, digits=3))
+
     def _get_pbar(self):
         if not hasattr(self, 'pbar'):
             self.pbar = tqdm(leave=True)
@@ -156,17 +173,23 @@ class Trainer:
 
 
 # Simple function to plot the loss curve and validation accuracy.
-def plot_validation_curves(losses_and_accs):
-    losses = [x for (x, _) in losses_and_accs]
-    accs = [x for (_, x) in losses_and_accs]
-    plt.figure(figsize=(16, 8))
+def plot_curves(train_log, val_log):
+    train_loss, train_acc = zip(*train_log)
+    val_loss, val_acc = zip(*val_log)
+    plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
-    plt.plot(losses)
+    plt.plot(train_loss, label='train')
+    plt.plot(val_loss, label='validation')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title('Average Training Loss per Epoch')
+    plt.title('Loss per epoch')
+    plt.legend()
+
     plt.subplot(1, 2, 2)
-    plt.plot(accs)
+    plt.plot(train_acc, label='train')
+    plt.plot(val_acc, label='validation')
     plt.xlabel('Epoch')
-    plt.ylabel('Validation Accuracy')
-    plt.title(f'Best Accuracy = {np.max(accs)} @ epoch {np.argmax(accs)}')
+    plt.ylabel('Accuracy')
+    plt.title(f'Best Accuracy = {np.max(val_acc)} @ epoch {np.argmax(val_acc)}')
+    plt.legend()
+    plt.show()

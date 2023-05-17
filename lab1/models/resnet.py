@@ -76,12 +76,16 @@ class ResidualBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, layers, residual=False, residual_type='b', num_channels=16, batchnorm=True):
+    def __init__(self, layers, residual=False, residual_type='b', num_channels=16, batchnorm=True, grayscale=False):
         super().__init__()
         self.residual = residual
         self.batchnorm = batchnorm
         self.residual_type = residual_type if residual else None
-        self.conv1 = nn.Conv2d(3, num_channels, 3, padding=1, bias=(not self.batchnorm))
+
+        # an alternative is to replicate the same channel 3 times
+        in_channels = 1 if grayscale else 3
+
+        self.conv1 = nn.Conv2d(in_channels, num_channels, 3, padding=1, bias=(not self.batchnorm))
         if self.batchnorm:
             self.bn1 = nn.BatchNorm2d(num_channels)
         # stack 3 convolutional block of 2n layers each, with first block performing a downsampling (only in 2nd and 3rd layer for CIFAR)
@@ -133,3 +137,30 @@ class ResNetForClassification(ResNet):
         # print(out.shape) # 128,64
         out = self.fc(out)
         return out
+
+class FullyConvResNet(ResNet):
+    def __init__(self, num_classes: int = 10, mapping_size = 16, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project = nn.Conv2d(self.num_channels,num_classes,1)
+        self.classifier = nn.AdaptiveAvgPool2d(1)
+        # Someway limits
+        self.map = nn.AdaptiveAvgPool2d(mapping_size)
+        self.s2d = nn.Softmax2d()
+
+    def forward(self, x):
+        out = super().forward(x)
+        # print(out.shape) # 128,64,4,4
+        out = self.project(out)
+        # print(out.shape) # 128,10,4,4
+        logits = self.classifier(out)
+        # print(out.shape) # 128,10,1,1
+        return logits.squeeze()
+
+    def localize(self, x):
+        out = super().forward(x)
+        out = self.project(out)
+        # compute classification
+        logits = self.classifier(out)
+        # compute activation map
+        mapping = self.map(out)
+        return logits.squeeze(), self.s2d(mapping)

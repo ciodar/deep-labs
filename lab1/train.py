@@ -49,7 +49,10 @@ def main(args):
     # log in to WandB
     wandb.login()
     wandb_config = {
-        "project": "lab-1-resnets"
+        "project": "lab-1",
+        "job_type": "model_trainer",
+        "dataset_name": "cifar10",
+        "model_collection_name": "CIFAR Fully-conv ResNet"
     }
 
     # Training hyperparameters.
@@ -57,7 +60,7 @@ def main(args):
         "optimizer": args.optim,
         "epochs": args.epochs,
         "lr": args.lr,
-        "wd": args.weight_decay,
+        "weight_decay": args.weight_decay,
         "momentum": args.momentum
     }
 
@@ -76,18 +79,18 @@ def main(args):
         **arch_hparams
     }
 
-    writer = wandb.init(**wandb_config, config=config)
+    writer = wandb.init(project=wandb_config['project'], config=config)
     config = wandb.config
     model = ResNetForClassification(**arch_hparams).to(DEVICE)
 
     tot_params = sum(p.numel() for p in model.parameters())
 
     print(model)
-    print("Total number of parameters: ", tot_params)
+    print('Total number of parameters: {:,}'.format(tot_params))
 
     # Get optimizer from torch.optim
-    opt = getattr(torch.optim, config.optimizer)(params=model.parameters(), lr=config.lr, weight_decay=config.wd,
-                                                 momentum=config.momentum)
+    opt = getattr(torch.optim, config.optimizer)(params=model.parameters(), lr=config.lr,
+                                                 weight_decay=config.weight_decay, momentum=config.momentum)
 
     scheduler = MultiStepLR(opt, milestones=[50, 75], gamma=0.1)
 
@@ -100,8 +103,6 @@ def main(args):
 parser = argparse.ArgumentParser(description='Lab1 - Resnets training')
 # Configuration
 parser.add_argument('--data', default='data/', help='path to CIFAR-10 dataset root (default: ./data/)')
-parser.add_argument('--epochs', default=85, type=int, metavar='N',
-                    help='number of total epochs to run')
 parser.add_argument('--batch_size', type=int,
                     default=128, help='input batch size')
 parser.add_argument('--checkpoints', action=argparse.BooleanOptionalAction,
@@ -109,6 +110,8 @@ parser.add_argument('--checkpoints', action=argparse.BooleanOptionalAction,
 parser.add_argument('--device', type=str, default='cuda',
                     help='ID of GPUs to use, eg. cuda:0,cuda:1')
 # Optimizer hyperparameters
+parser.add_argument('--epochs', default=85, type=int, metavar='N',
+                    help='number of total epochs to run')
 parser.add_argument('--optim', type=str, default='SGD',
                     help='optim for training, Adam / SGD (default)')
 parser.add_argument('--lr', default=0.1, type=float,
