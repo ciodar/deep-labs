@@ -1,9 +1,8 @@
-import os
-
 import numpy as np
-import torchmetrics
-import torch.nn.functional as F
+import os
 import torch
+import torch.nn.functional as F
+import torchmetrics
 from matplotlib import pyplot as plt
 from sklearn.metrics import accuracy_score, classification_report
 from tqdm import tqdm

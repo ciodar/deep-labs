@@ -1,20 +1,14 @@
 # Start with some standard imports.
-from pprint import pprint
 
 import argparse
-
-import numpy as np
 import torch
 import torchvision.datasets as datasets
-from torch.optim.lr_scheduler import MultiStepLR
-from torch.utils.data import Subset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from wandb.beta.workflows import use_model
 
+import models.resnet
 import wandb
-from data_loader import SubsetDataset
-from models.resnet import ResNetForClassification, FullyConvResNet
 from trainer import Trainer
 
 
@@ -53,7 +47,6 @@ def main(args):
     # "[[entity/]project/]collectionName:latest"
     ##### W&B MODEL MANAGEMENT SPECIFIC CALLS ######
 
-
     if args.checkpoint_url:
         run = wandb.init()
         if USE_BETA_APIS:
@@ -66,11 +59,11 @@ def main(args):
         # this ignores console params
         config_dict = ckpt['config']
         arch_hparams.update((k, config_dict[k]) for k in config_dict.keys() & arch_hparams.keys())
-        model = ResNetForClassification(**arch_hparams).to(DEVICE)
+        model = getattr(models.resnet, ckpt['arch'])(**arch_hparams).to(DEVICE)
         state_dict = ckpt['state_dict']
         model.load_state_dict(state_dict)
     else:
-        model = ResNetForClassification(**arch_hparams).to(DEVICE)
+        model = getattr(models.resnet, args.model)(**arch_hparams).to(DEVICE)
 
     tot_params = sum(p.numel() for p in model.parameters())
     print(model)
@@ -85,6 +78,7 @@ def main(args):
 
 parser = argparse.ArgumentParser(description='Lab1 - Resnets evaluation')
 # Configuration
+parser.add_argument('--model', required=True, help='model to be used (ResNetForClassification, FullyConvResNet')
 parser.add_argument('--checkpoint_url', required=True, help='url to a model collection on wandb')
 parser.add_argument('--data', default='data/', help='path to CIFAR-10 dataset root (default: ./data/)')
 parser.add_argument('--batch_size', type=int,

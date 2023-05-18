@@ -1,13 +1,13 @@
 # Start with some standard imports.
 import argparse
-
 import numpy as np
 import torch
 import torchvision.datasets as datasets
-from torch.optim.lr_scheduler import MultiStepLR
-from torch.utils.data import Subset
 import torchvision.transforms as transforms
+from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader
+from torch.utils.data import Subset
+
 import wandb
 from data_loader import SubsetDataset
 from models.resnet import ResNetForClassification

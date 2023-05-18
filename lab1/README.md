@@ -1,5 +1,11 @@
 # Lab 1 - CNNs
 
+This laboratory is about Convolutional Neural Networks and it is divided in two parts:
+- In the first part we will implement a ResNet model for image classification on MNIST and CIFAR-10 datasets, reproducing some of the results from the original paper. 
+- In the second part we will perform Object Localization and visualize Class Activation Maps of the previously trained model.
+
+The procedure and the results are shown in this [notebook](Lab1-CNNs.ipynb)
+
 ## Project Structure
 
 ```
@@ -27,6 +33,17 @@ lab-1/
 
 ## Requirements
 
+- python 3.10
+- pytorch 2.0.0
+- torchvision 0.15.0
+- wandb 0.15.0
+- jupyterlab
+- ipython
+- matplotlib
+- scikit-learn 1.2.2
+- tqdm
+- numpy
+
 ## Usage
 For training, run
 
@@ -42,9 +59,21 @@ python test.py --data <path/to/dataset> --batch_size <batch_size> --device <cpu 
 
 ## Results
 
-| Layers | Residual | Parameters | Accuracy  |
-|:------:|:--------:|:----------:|:---------:|
-|   20   |   Yes    |    270K    |   0.872   |
-|   20   |    No    |    270K    |   0.867   |
-|   56   |   Yes    |    835K    | **0.900** |
-|   56   |    No    |    835K    |   0.839   |
+### Exercise 1 - Residual Networks
+A report for exercise 1 is available [here](https://api.wandb.ai/links/dla-darcio/tkjq72ic).
+
+| # Layers | Residual | Parameters | Accuracy  |
+|:--------:|:--------:|:----------:|:---------:|
+|    20    |   Yes    |    270K    |   0.872   |
+|    20    |    No    |    270K    |   0.867   |
+|    56    |   Yes    |    835K    | **0.900** |
+|    56    |    No    |    835K    |   0.839   |
+
+### Exercise 2.2 - Object Localization
+
+![MNIST object localization](./assets/mnist_localization.png)
+
+### Exercise 2.3 - Class Activation Maps
+
+![Class Activation Maps Example](./assets/cam_example.png)
+
