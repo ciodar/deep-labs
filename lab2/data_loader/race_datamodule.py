@@ -1,3 +1,5 @@
+from typing import List, Union
+
 import datasets
 from lightning import LightningDataModule
 from torch.utils.data import DataLoader
@@ -7,8 +9,9 @@ from data_loader.collator import DataCollatorForMultipleChoice
 
 
 class RACEDataModule(LightningDataModule):
-    text_fields = ["article", "question"]
-    ending_names = ["options"]
+    text_fields = "article"
+    question_field = "question"
+    ending_names = "options"
     label_name = "answer"
     label_map = {"A": 0, "B": 1, "C": 2, "D": 3}
 
@@ -44,11 +47,6 @@ class RACEDataModule(LightningDataModule):
 
         for split in self.dataset.keys():
             self.dataset[split] = self.dataset[split].map(
-                self.process_text_columns,
-                batched=False,
-                remove_columns=self.text_fields,
-            )
-            self.dataset[split] = self.dataset[split].map(
                 self.convert_to_features,
                 batched=True,
                 remove_columns=self.dataset[split].column_names
@@ -62,12 +60,42 @@ class RACEDataModule(LightningDataModule):
         datasets.load_dataset("race", self.task_name)
         AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
 
-    def train_dataloader(self):
+    @staticmethod
+    def compute_choice(question, option):
+        if '_' in question:
+            choice = question.replace('_', ' ' + option)
+        else:
+            choice = question + ' ' + option
+        return choice
+
+    def convert_to_features(self, example_batch, indices=None):
+        first_sentences = example_batch[self.text_fields] * 4
+        questions = example_batch[self.question_field]
+        options = example_batch[self.ending_names]
+        second_sentences = [
+            [self.compute_choice(question, o) for o in options[i]] for i, question in enumerate(questions)
+        ]
+        # Flatten the list
+        second_sentences = sum(second_sentences,[])
+
+        text_pairs = list(zip(first_sentences, second_sentences))
+
+        # Tokenize the text/text pairs
+        features = self.tokenizer.batch_encode_plus(
+            text_pairs, max_length=512, pad_to_max_length=True, truncation=True
+        )
+
+        features = {k: [v[i: i + 4] for i in range(0, len(v), 4)] for k, v in features.items()}
+        features["label"] = [self.label_map[i] for i in example_batch["answer"]]
+
+        return features
+
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(self.dataset["train"],
                           collate_fn=DataCollatorForMultipleChoice(tokenizer=self.tokenizer, return_tensors="pt"),
                           batch_size=self.train_batch_size, shuffle=True)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
         if len(self.eval_splits) == 1:
             return DataLoader(self.dataset["validation"],
                               collate_fn=DataCollatorForMultipleChoice(tokenizer=self.tokenizer, return_tensors="pt"),
@@ -77,7 +105,7 @@ class RACEDataModule(LightningDataModule):
                                collate_fn=DataCollatorForMultipleChoice(tokenizer=self.tokenizer, return_tensors="pt"),
                                batch_size=self.eval_batch_size) for x in self.eval_splits]
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
         if len(self.eval_splits) == 1:
             return DataLoader(self.dataset["test"],
                               collate_fn=DataCollatorForMultipleChoice(tokenizer=self.tokenizer, return_tensors="pt"),
@@ -86,22 +114,3 @@ class RACEDataModule(LightningDataModule):
             return [DataLoader(self.dataset[x],
                                collate_fn=DataCollatorForMultipleChoice(tokenizer=self.tokenizer, return_tensors="pt"),
                                batch_size=self.eval_batch_size) for x in self.eval_splits]
-
-    def process_text_columns(self, example):
-        return {'first_sentence': ' '.join([example[i] for i in self.text_fields])}
-
-    def convert_to_features(self, example_batch, indices=None):
-        first_sentences = example_batch['first_sentence'] * 4
-        second_sentences = [item for sublist in example_batch['options'] for item in sublist]
-        # Either encode single sentence or sentence pairs
-        texts_or_text_pairs = list(zip(first_sentences, second_sentences))
-
-        # Tokenize the text/text pairs
-        features = self.tokenizer.batch_encode_plus(
-            texts_or_text_pairs, max_length=512, pad_to_max_length=True, truncation=True
-        )
-
-        features = {k: [v[i: i + 4] for i in range(0, len(v), 4)] for k, v in features.items()}
-        features["label"] = [self.label_map[i] for i in example_batch["answer"]]
-
-        return features

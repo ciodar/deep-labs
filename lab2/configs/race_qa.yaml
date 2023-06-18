@@ -1,6 +1,7 @@
 # lightning.pytorch==2.0.1.post0
-seed_everything: true
+seed_everything: 42
 trainer:
+  default_root_dir: runs/
   accelerator: auto
   strategy: auto
   devices: auto
@@ -70,15 +71,16 @@ trainer:
   plugins: null
   sync_batchnorm: false
   reload_dataloaders_every_n_epochs: 0
-  default_root_dir: null
 model:
   model_name_or_path: 'distilbert-base-uncased'
   num_choices: 4
   criterion: 'MultiMarginLoss'
-  learning_rate: 1e-3
+  learning_rate: 2e-05
   adam_epsilon: 1.0e-08
   warmup_steps: 0
   weight_decay: 0.0
+  freeze_transformer: false
+  freeze_classifier: false
 data:
   model_name_or_path: 'distilbert-base-uncased'
   task_name: 'middle'

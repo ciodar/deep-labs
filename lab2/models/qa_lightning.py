@@ -21,6 +21,8 @@ class QATransformer(LightningModule):
             adam_epsilon: float = 1e-8,
             warmup_steps: int = 0,
             weight_decay: float = 0.0,
+            freeze_transformer: bool = False,
+            freeze_classifier: bool = False,
             **kwargs,
     ):
         super().__init__()
@@ -80,7 +82,12 @@ class QATransformer(LightningModule):
 
     def configure_optimizers(self):
         """Prepare optimizer and schedule (linear warmup and decay)"""
-        classifier = self.classifier
-        optimizer = AdamW(classifier.parameters(), lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
+        if self.hparams.freeze_transformer:
+            for param in self.model.parameters():
+                param.requires_grad = False
+        if self.hparams.freeze_classifier:
+            for param in self.classifier.parameters():
+                param.requires_grad = False
+        optimizer = AdamW(filter(lambda p: p.requires_grad, self.parameters()), lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
 
         return optimizer
