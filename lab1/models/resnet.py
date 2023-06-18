@@ -1,5 +1,5 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 
@@ -29,12 +29,13 @@ class DownsampleB(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, residual=False, residual_type='b', stride=1):
+    def __init__(self, in_channels, out_channels, residual=True, residual_type='b', stride=1, batchnorm=True):
         super().__init__()
         self.residual = residual
-        self.residual_type = residual_type.lower()
+        self.batchnorm = batchnorm
         self.stride = stride
         if residual:
+            self.residual_type = residual_type.lower()
             if self.residual_type == 'a' and (in_channels != out_channels or stride > 1):
                 self.project = DownsampleA(in_channels, out_channels, stride)
             if self.residual_type == 'b' and (in_channels != out_channels or stride > 1):
@@ -42,10 +43,12 @@ class ResidualBlock(nn.Module):
             if self.residual_type == 'c':
                 self.project = DownsampleB(in_channels, out_channels, stride)
         # vgg has strided conv instead of maxpool
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False)
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride,
+                               bias=(not self.batchnorm))
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=(not self.batchnorm))
+        if self.batchnorm:
+            self.bn1 = nn.BatchNorm2d(out_channels)
+            self.bn2 = nn.BatchNorm2d(out_channels)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -57,57 +60,107 @@ class ResidualBlock(nn.Module):
     def forward(self, x):
         # first conv
         out = self.conv1(x)
-        out = self.bn1(out)
+        if self.batchnorm:
+            out = self.bn1(out)
         out = F.relu(out)
         # second conv
         out = self.conv2(out)
-        out = self.bn2(out)
+        if self.batchnorm:
+            out = self.bn2(out)
         # residual connection
         if self.residual:
             res = x if x.shape == out.shape else self.project(x)
-            out = out + res
+            out += res
         out = F.relu(out)
         return out
 
 
-class TinyResNet(nn.Module):
-    def __init__(self, layers, num_classes=10, residual=False, residual_type='b', num_channels=16):
+class ResNet(nn.Module):
+    def __init__(self, layers, residual=False, residual_type='b', num_channels=16, batchnorm=True, grayscale=False):
         super().__init__()
         self.residual = residual
-        self.conv1 = nn.Conv2d(3, num_channels, 3, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(num_channels)
-        # stack 3 convolutional block of 2n layers each, with
-        self.layer1 = self._add_block(num_channels, num_channels, layers[0], self.residual, residual_type, stride=1)
-        num_channels *= 2
-        self.layer2 = self._add_block(num_channels // 2, num_channels, layers[1], self.residual, residual_type,
-                                      stride=2)
-        num_channels *= 2
-        self.layer3 = self._add_block(num_channels // 2, num_channels, layers[2], self.residual, residual_type,
-                                      stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(num_channels, num_classes)
+        self.batchnorm = batchnorm
+        self.residual_type = residual_type if residual else None
 
-    def _add_block(self, in_channels, out_channels, n_blocks, residual=False, residual_type='b', stride=1):
+        # an alternative is to replicate the same channel 3 times
+        in_channels = 1 if grayscale else 3
+
+        self.conv1 = nn.Conv2d(in_channels, num_channels, 3, padding=1, bias=(not self.batchnorm))
+        if self.batchnorm:
+            self.bn1 = nn.BatchNorm2d(num_channels)
+        # stack 3 convolutional block of 2n layers each, with first block performing a downsampling (only in 2nd and 3rd layer for CIFAR)
+        self.layer1 = self._add_block(in_channels=num_channels, out_channels=num_channels, n_blocks=layers[0], stride=1)
+        num_channels *= 2
+        self.layer2 = self._add_block(num_channels // 2, num_channels, layers[1], stride=2)
+        num_channels *= 2
+        self.layer3 = self._add_block(num_channels // 2, num_channels, layers[2], stride=2)
+        self.num_channels = num_channels
+
+    def _add_block(self, in_channels, out_channels, n_blocks, stride=1):
         layers = []
-        layers.append(ResidualBlock(in_channels, out_channels, residual, residual_type, stride=stride))
+        layers.append(ResidualBlock(in_channels, out_channels, self.residual, self.residual_type, stride=stride,
+                                    batchnorm=self.batchnorm))
         in_channels = out_channels
         for i in range(1, n_blocks):
-            layers.append(ResidualBlock(in_channels, out_channels, residual))
+            layers.append(
+                ResidualBlock(in_channels, out_channels, self.residual, self.residual_type, batchnorm=self.batchnorm))
         return nn.Sequential(*layers)
 
     def forward(self, x):
         out = self.conv1(x)
-        out = self.bn1(out)
+        if self.batchnorm:
+            out = self.bn1(out)
         out = F.relu(out, inplace=True)
-        # print(out.shape) # 128,16,16,16
+        # print(out.shape) # 128,16,32,32
         out = self.layer1(out)
-        # print(out.shape) # 128,32,8,8
+        # print(out.shape) # 128,32,16,16
         out = self.layer2(out)
-        # print(out.shape)
+        # print(out.shape) # 128,32,8,8
         out = self.layer3(out)
+        # print(out.shape) # 128,64,4,4
         # print(out.shape)
-        # print(out.shape)
+        return out
+
+
+class ResNetForClassification(ResNet):
+    def __init__(self, num_classes: int = 10, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(self.num_channels, num_classes)
+
+    def forward(self, x):
+        out = super().forward(x)
+        # print(out.shape) # 128,64,4,4
         out = self.avgpool(out)
+        # print(out.shape) # 128,64,1,1
         out = torch.flatten(out, 1)
+        # print(out.shape) # 128,64
         out = self.fc(out)
         return out
+
+class FullyConvResNet(ResNet):
+    def __init__(self, num_classes: int = 10, mapping_size = 16, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project = nn.Conv2d(self.num_channels,num_classes,1)
+        self.classifier = nn.AdaptiveAvgPool2d(1)
+        # Someway limits
+        self.map = nn.AdaptiveAvgPool2d(mapping_size)
+        self.s2d = nn.Softmax2d()
+
+    def forward(self, x):
+        out = super().forward(x)
+        # print(out.shape) # 128,64,4,4
+        out = self.project(out)
+        # print(out.shape) # 128,10,4,4
+        logits = self.classifier(out)
+        # print(out.shape) # 128,10,1,1
+        return logits.squeeze()
+
+    def localize(self, x):
+        out = super().forward(x)
+        out = self.project(out)
+        # compute classification
+        logits = self.classifier(out)
+        # compute activation map
+        mapping = self.map(out)
+        return logits.squeeze(), self.s2d(mapping)
