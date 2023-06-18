@@ -2,4 +2,7 @@
 
 */artifacts/
 */wandb/
+
 .idea/
+
+*/runs/
