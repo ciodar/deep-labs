@@ -1,11 +1,11 @@
 from lightning.pytorch.cli import LightningCLI
 
-from data_loader.race_datamodule import RACEDataModule
+from data_loader import *
 from models.qa_lightning import QATransformer
 
 
 def main():
-    cli = LightningCLI(QATransformer, RACEDataModule, save_config_callback=None)
+    cli = LightningCLI(QATransformer, save_config_callback=None)
 
 
 if __name__ == '__main__':
