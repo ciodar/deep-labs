@@ -73,7 +73,7 @@ class SWAGDataModule(LightningDataModule):
 
         # Tokenize the text/text pairs
         features = self.tokenizer.batch_encode_plus(
-            text_pairs, max_length=512, pad_to_max_length=True, truncation=True
+            text_pairs, max_length=self.max_seq_length, pad_to_max_length=True, truncation=True
         )
 
         features = {k: [v[i: i + 4] for i in range(0, len(v), 4)] for k, v in features.items()}

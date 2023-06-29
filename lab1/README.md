@@ -1,12 +1,15 @@
 # Lab 1 - CNNs
 
-This laboratory is about Convolutional Neural Networks and it is divided in two parts:
-- In the first part we will implement a ResNet model for image classification on MNIST and CIFAR-10 datasets, reproducing some of the results from the original paper. 
-- In the second part we will perform Object Localization and visualize Class Activation Maps of the previously trained model.
+This laboratory is about Convolutional Neural Networks and it is divided in three parts:
 
-The procedure and the results are shown in this [notebook](Lab1-CNNs.ipynb)
+1. We will introduce the basic experimental pipeline, introducing WandB and implement a simple MLP model for image classification on MNIST dataset.
+2. we will then implement a ResNet model for image classification on MNIST and CIFAR-10 datasets, reproducing some of the results from the original paper. 
+3. In the last part we will perform Object Localization and visualize Class Activation Maps of the previously trained model.
 
-## Project Structure
+The procedure and the results are shown in this [notebook](Lab1-CNNs.ipynb). 
+A WandB report of ResNet results is available on [here](https://api.wandb.ai/links/dla-darcio/tkjq72ic).
+
+## Project Structure 
 
 ```
 lab-1/
@@ -31,7 +34,7 @@ lab-1/
 └── utils.py -  utility functions
 ```
 
-## Requirements
+## Requirements 
 
 - python 3.10
 - pytorch 2.0.0
@@ -60,7 +63,9 @@ python test.py --data <path/to/dataset> --batch_size <batch_size> --device <cpu 
 ## Results
 
 ### Exercise 1 - Residual Networks
-A report for exercise 1 is available [here](https://api.wandb.ai/links/dla-darcio/tkjq72ic).
+We implemented a ResNet model and trained it on MNIST and CIFAR-10 datasets. We show that the ResNet model is able to achieve better results than the non-residual counterpart.
+
+We also show that the performance of non-residual models degrades after a certain number of layers. Conversely, residual networks' performance increases with the number of layers, but it saturates due to overfitting  after a certain number of layers.
 
 | # Layers | Residual | Parameters | Accuracy  |
 |:--------:|:--------:|:----------:|:---------:|
@@ -70,10 +75,12 @@ A report for exercise 1 is available [here](https://api.wandb.ai/links/dla-darci
 |    56    |    No    |    835K    |   0.839   |
 
 ### Exercise 2.2 - Object Localization
+We fully-convolutionalized the ResNet model and trained it on MNIST dataset. We show that this model can effectively object localization, even if it was trained only for classification.
 
 ![MNIST object localization](./assets/mnist_localization.png)
 
 ### Exercise 2.3 - Class Activation Maps
+We implemented Class Activation Maps (CAM) for ResNet model. We show that the Class Activation Maps are able to highlight the most important regions of the image for the classification task.
 
 ![Class Activation Maps Example](./assets/cam_example.png)
 

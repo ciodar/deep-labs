@@ -56,7 +56,7 @@ class QATransformer(LightningModule):
                                  output_hidden_states=None,
                                  return_dict=None)
         hidden_states = outputs[0]  # shape (bs * num_choices, max_len, hidden_size)
-        pooled_output = hidden_states[:, 0]  # shape (bs * num_choices, hidden_size)
+        pooled_output = hidden_states[:, 0,:]  # shape (bs * num_choices, hidden_size)
         logits = self.classifier(pooled_output)  # shape (bs * num_choices, num_labels)
         reshaped_logits = logits.view(-1, self.num_choices)  # shape (bs, num_choices, num_labels)
         return reshaped_logits
