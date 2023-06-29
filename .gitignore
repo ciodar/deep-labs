@@ -1,8 +1,10 @@
-*/data/
-
-*/artifacts/
-*/wandb/
-
 .idea/
+.ipynb_checkpoints/
 
-*/runs/
+data/
+runs/
+artifacts/
+wandb/
+__pycache__/
+
+*.pth
