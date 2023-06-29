@@ -74,6 +74,8 @@ We also show that the performance of non-residual models degrades after a certai
 |    56    |   Yes    |    835K    | **0.900** |
 |    56    |    No    |    835K    |   0.839   |
 
+A complete report of the results is available on [WandB](https://api.wandb.ai/links/dla-darcio/tkjq72ic).
+
 ### Exercise 2.2 - Object Localization
 We fully-convolutionalized the ResNet model and trained it on MNIST dataset. We show that this model can effectively object localization, even if it was trained only for classification.
 
