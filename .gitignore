@@ -1,9 +1,10 @@
+.idea/
+.ipynb_checkpoints/
+
 data/
 runs/
 artifacts/
 wandb/
 __pycache__/
-
-.idea/
 
 *.pth
