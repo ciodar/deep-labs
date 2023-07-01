@@ -1,4 +1,4 @@
-from data_loader import TweetEvalDataModule
+from data_loader.swag_datamodule import SWAGDataModule
 from transformers import AutoModel
 import torch
 from tqdm import tqdm
@@ -7,9 +7,17 @@ import argparse
 
 @torch.no_grad()
 def extract_features(model, device, batch):
-    input_ids = batch['input_ids'].to(device).squeeze()
-    attention_mask = batch['attention_mask'].to(device).squeeze()
+    input_ids = batch['input_ids'].to(device)
+    attention_mask = batch['attention_mask'].to(device)
     labels = batch['label']
+
+    batch_size = input_ids.shape[0]
+    num_choices = input_ids.shape[1]
+
+    # unroll batch size and number of choices for MCQA
+    input_ids = input_ids.view(-1, input_ids.shape[-1])
+    attention_mask = attention_mask.view(-1,
+                                         attention_mask.shape[-1])
 
     # calculates hidden states with frozen Transformer model
     outputs = model(input_ids=input_ids,
@@ -20,7 +28,7 @@ def extract_features(model, device, batch):
                     )
 
     hidden_states = outputs[0]
-    pooled_output = hidden_states[:, 0]
+    pooled_output = hidden_states[:, 0, :].view(batch_size, num_choices, -1)  # shape (bs, num_choices, hidden_size)
     return pooled_output.detach().cpu(), labels
 
 
@@ -31,7 +39,7 @@ def main(args):
     model_name_or_path = args.model_name_or_path
 
     # Load SWAG DataModule and prepare data
-    dm = TweetEvalDataModule(model_name_or_path, "irony",max_seq_length=30,  train_batch_size=batch_size, eval_batch_size=batch_size)
+    dm = SWAGDataModule(model_name_or_path, "regular", 30, batch_size, batch_size)
     dm.prepare_data()  # downloads data if needed
     dm.setup("fit")  # splits and preprocesses data
     train_dl, valid_dl = dm.train_dataloader(), dm.val_dataloader()
@@ -50,8 +58,8 @@ def main(args):
 
         all_features = torch.cat(all_features, dim=0)
         all_labels = torch.cat(all_labels, dim=0)
-        torch.save(all_features, "tweet_eval_{}_features.pt".format(split))
-        torch.save(all_labels, "tweet_eval_{}_labels.pt".format(split))
+        torch.save(all_features, "swag_{}_features.pt".format(split))
+        torch.save(all_labels, "swag_{}_labels.pt".format(split))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Lab2 - Feature extraction')

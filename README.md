@@ -8,4 +8,4 @@ Collection of projects of four different Deep Learning areas for Deep Learning A
 | [**Working with Deep Models**](./lab1/README.md/)    | MNIST, CIFAR-10     | Image classification using residual CNNs, Object localization and Class Activation Maps                              | ✅     |
 | [**Natural Language Processing**](./lab2/README.md/) | SWAG, RACE          | Hands-on introduction to GPT, 🤗 for text generation, classification and  Multiple Choice Question Answering (MCQA) | ✅     |
 | **Reinforcement Learning**      |                     |                                                                                                                      | ⌛      |
-| **Adversarial Training**        | CIFAR-10, CIFAR-100 | OOD Detection, Adversarial-augmented training                                                                        | ⌛      |
+| [**Adversarial Training**](./lab4/README.md/)        | CIFAR-10, CIFAR-100 | OOD Detection, Adversarial-augmented training                                                                        | ✅      |
