@@ -6,7 +6,9 @@ It is divided in three parts:
 2. Adversarial Attacks: Showed how to generate adversarial examples using the Fast Gradient Sign Method (FGSM), and trained a robust model using adversarial training.  
 3. JARN: Implemented JARN (Jacobian Adversarially Regularized Networks for Robustness), a method to train robust models using adversarial training.
 
-The process is explained in the [notebook](./Lab4_OOD.ipynb). 
+[![Jupyter Notebook](https://img.shields.io/badge/jupyter-%23FA0F00.svg?style=plastic&logo=jupyter&logoColor=white)](./Lab4_OOD.ipynb)
+
+An implementation of all three parts can be found in the [Jupyter Notebook](./Lab4_OOD.ipynb).
 
 ## 1. Out Of Distribution Detection
 
@@ -15,6 +17,8 @@ The process is explained in the [notebook](./Lab4_OOD.ipynb).
 ## 2. Adversarial Attacks
 
 ![FGSM example](./images/fgsm_example.png)
+
+![FGSM epsilons](./images/fgsm_epsilons.png)
 
 ## 3. JARN
 
