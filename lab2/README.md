@@ -14,7 +14,7 @@ In this section we introduce the 🤗 Transformers library and use it to perform
 
 ## 3. MCQA with 🤗 Transformers and⚡Lightning 
 
-[![WandB report](https://img.shields.io/badge/Weights_&_Biases-FFCC33?style=plastic&logo=WeightsAndBiases&logoColor=black)](https://api.wandb.ai/links/dla-darcio/25op1oeh)
+[![WandB report](https://img.shields.io/badge/Weights_&_Biases-FFCC33?style=plastic&logo=WeightsAndBiases&logoColor=black)](https://api.wandb.ai/links/dla-darcio/ibxzhjmp)
 
 In this section we employed pretrained models from the 🤗 Transformers library to perform MCQA tasks. We used the [Swag](https://arxiv.org/abs/1808.05326) dataset and [RACE](https://aclanthology.org/D17-1082.pdf) datasets, two Multiple Choice Question Answering datasets. Both dataset are composed by an  initial sentence describing the context, and four different options.
 

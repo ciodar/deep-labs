@@ -37,6 +37,7 @@ class Trainer:
         self.optimizerG = optimizers['generator']
         self.optimizerD = optimizers['discriminator']
         self.writer = writer
+        self.checkpoint_dir = writer.dir
         self.epochs = epochs
         self.device = device
         # Discriminator hyperparameters
@@ -47,6 +48,7 @@ class Trainer:
         self.at1 = at1
         self.lambda_ = lambda_adv
         self.add_noise = add_noise
+        self.dataset_name = "cifar-10"
         
         # initialize metrics (for now it's just top-1 accuracy)
         self.train_metrics = nn.ModuleDict({'train_accuracy_cls': tm.Accuracy(task="multiclass", num_classes=10),
@@ -158,7 +160,9 @@ class Trainer:
             d_losses.append(errD.item())
             pbar.update()
         log_n_images = int(np.sqrt(x.size(0)))
-        normalized_J = F.instance_norm(J.detach().cpu(),use_input_stats=True)
+        J_cpu = J.detach().cpu()
+        N, C, H, W = J_cpu.shape
+        normalized_J = F.layer_norm(J_cpu,[C,H,W])
         self.writer.log({"J_prime": wandb.Image(torchvision.utils.make_grid(fake[:log_n_images].detach().cpu())),
                          "J": wandb.Image(torchvision.utils.make_grid(normalized_J[:log_n_images])),
                          "original": wandb.Image(torchvision.utils.make_grid(x[:log_n_images].detach().cpu())),
@@ -212,17 +216,19 @@ class Trainer:
         return self.pbar
 
     def _save_checkpoint(self, model, epoch, best=False):
-        arch = type(model).__name__
+        netG, netD = model
+        arch = type(netG).__name__
+        
         state = {
             'arch': arch,
             'epoch': epoch,
-            'state_dict': model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
+            'state_dict': netG.state_dict(),
             'config': dict(self.writer.config)
         }
         # print(f"Saving into {filename} ...")
+
         if USE_BETA_APIS:
-            model_version = wandb.log_model(model, self.dataset_name, ["best"] if best else None)
+            model_version = wandb.log_model(netG, self.dataset_name, ["best"] if best else None)
             if best:
                 self.best_model = model_version
         else:

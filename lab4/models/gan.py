@@ -56,7 +56,7 @@ class Adapter(nn.Module):
         elif adapter_type == 'normalize':
             self.adapter = None
             self.activation = None
-        self.instancenorm = nn.InstanceNorm2d(3)
+        self.normalization = F.layer_norm
 
         # initialize weights
         if self.adapter is not None:
@@ -68,7 +68,8 @@ class Adapter(nn.Module):
         nn.init.constant_(self.adapter.bias.data, 0.0)
 
     def forward(self, x):
-        out = self.instancenorm(x)
+        N, C, H, W = x.shape
+        out = self.normalization(x,[C,H,W])
         if self.adapter is not None:
             out = self.adapter(out)
         if self.activation is not None:
