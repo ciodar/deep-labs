@@ -10,14 +10,14 @@ trainer:
   logger:
     class_path: lightning.pytorch.loggers.WandbLogger
     init_args:
-      name: mlp-swag
+      name: mlp-tweet_eval
       save_dir: runs/
       version: null
       offline: false
       dir: null
       id: null
       anonymous: null
-      project: lab-2-question-answering
+      project: lab-2-classification
       log_model: true
       experiment: null
       prefix: ''
@@ -43,18 +43,18 @@ data:
   class_path: data_loader.FeatureDataModule
   init_args:
     root_dir: ./data/
-    dataset: swag
+    dataset: tweet_eval
     batch_size: 32
     num_workers: 4
     pin_memory: true
 model:
-  class_path: models.QAMLP
+  class_path: models.MLP
   init_args:
-    num_choices: 4
+    num_classes: 2
     input_size: 768
     hidden_size: 256
-    criterion: CrossEntropyLoss
-    learning_rate: 1.0e-05
+    criterion: BCELoss
+    learning_rate: 1.0e-3
     adam_epsilon: 1.0e-08
     warmup_steps: 0
     weight_decay: 0.0

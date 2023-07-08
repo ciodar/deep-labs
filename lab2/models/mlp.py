@@ -35,7 +35,7 @@ class MLP(LightningModule):
         self.classifier = nn.Sequential(
             nn.Linear(self.input_size, self.hidden_size),
             nn.ReLU(),
-            nn.Linear(self.hidden_size, 1),
+            nn.Linear(self.hidden_size, 1)
         )
         self.criterion = getattr(nn, criterion)() if type(criterion) == str else criterion
         self.train_acc = torchmetrics.Accuracy(task="binary")
@@ -48,7 +48,7 @@ class MLP(LightningModule):
     def training_step(self, batch, batch_idx):
         inputs, labels = batch
         logits = self(inputs)
-        probs = torch.sigmoid(logits)
+        probs = torch.sigmoid(logits).view(-1)
         loss = self.criterion(probs, labels.float())
         self.log('loss/train', loss, on_step=True, on_epoch=False, prog_bar=True)
         self.train_acc(labels, probs > 0.5)
@@ -58,7 +58,7 @@ class MLP(LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         inputs, labels = batch
         logits = self(inputs)
-        probs = torch.sigmoid(logits)
+        probs = torch.sigmoid(logits).view(-1)
         loss = self.criterion(probs, labels.float())
         self.log('loss/validation', loss, on_step=False, on_epoch=True, prog_bar=True)
         self.valid_acc(labels, probs > 0.5)

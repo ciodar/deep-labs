@@ -72,15 +72,17 @@ trainer:
   sync_batchnorm: false
   reload_dataloaders_every_n_epochs: 0
 model:
-  model_name_or_path: 'distilbert-base-uncased'
-  num_choices: 4
-  criterion: 'CrossEntropyLoss'
-  learning_rate: 2e-05
-  adam_epsilon: 1.0e-08
-  warmup_steps: 0
-  weight_decay: 0.0
-  freeze_transformer: false
-  freeze_classifier: false
+  class_path: models.QATransformer
+  init_args:
+    model_name_or_path: 'distilbert-base-uncased'
+    num_choices: 4
+    criterion: 'CrossEntropyLoss'
+    learning_rate: 2e-05
+    adam_epsilon: 1.0e-08
+    warmup_steps: 0
+    weight_decay: 0.0
+    freeze_transformer: false
+    freeze_classifier: false
 data:
   class_path: data_loader.SWAGDataModule
   init_args:

@@ -12,19 +12,21 @@ This section uses a pretrained GPT model to perform character-level language mod
 ## 2. Text Generation with 🤗 Transformers
 In this section we introduce the 🤗 Transformers library and use it to perform text generation, showing the main techniques to perform this task.
 
-## 3. MCQA with 🤗 Transformers and⚡Lightning 
+## 3. Classification and MCQA with 🤗 Transformers and⚡Lightning 
 
 [![WandB report](https://img.shields.io/badge/Weights_&_Biases-FFCC33?style=plastic&logo=WeightsAndBiases&logoColor=black)](https://api.wandb.ai/links/dla-darcio/ibxzhjmp)
 
-In this section we employed pretrained models from the 🤗 Transformers library to perform MCQA tasks. We used the [Swag](https://arxiv.org/abs/1808.05326) dataset and [RACE](https://aclanthology.org/D17-1082.pdf) datasets, two Multiple Choice Question Answering datasets. Both dataset are composed by an  initial sentence describing the context, and four different options.
+In this section we employed pretrained models from the 🤗 Transformers library to perform Classification and MCQA tasks. We used the [Tweet_eval](https://arxiv.org/abs/2010.12421v2) dataset for classification and the [Swag](https://arxiv.org/abs/1808.05326) dataset for MCQA.
 
-The procedure and the results are also available on [WandB](https://api.wandb.ai/links/dla-darcio/25op1oeh).
+For both tasks, we extracted the features using a pretrained DistilBERT model and then trained a simple MLP on top of the features. We also trained the DistilBERT model on top of the features for the MCQA task.
+
+The results are also available on [WandB](https://api.wandb.ai/links/dla-darcio/ibxzhjmp).
 
 ### Usage
 To extract features from a MCQA dataset, run
 
 ```bash
-python feature_extraction.py --dataset <dataset_name> --model <model_name> --batch_size <batch_size>
+python feature_qa_feature_extraction.py --dataset <dataset_name> --model <model_name> --batch_size <batch_size>
 ```
 
 where `<dataset_name>` can be `swag` or `race`, `<model_name>` can be any language model from Huggingface and `<batch_size>` is the batch size used for feature extraction.

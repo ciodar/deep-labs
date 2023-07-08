@@ -1,11 +1,11 @@
 from lightning.pytorch.cli import LightningCLI
 
 from data_loader import *
-from models.qa_mlp import QAMLP
+from models import *
 
 
 def main():
-    cli = LightningCLI(QAMLP, save_config_callback=None)
+    cli = LightningCLI(save_config_callback=None)
 
 
 if __name__ == '__main__':
